@@ -31,4 +31,16 @@ MODEL_GEMINI_2_0_FLASH = "gemini-2.0-flash-exp"
 
 
 
-class OrchestratorAgent():
+root_agent = Agent(
+    name="research_agent_A",
+    description="answers questions provided by the orchestrator agent",
+    session_service=InMemorySessionService(),
+    llm=LlmAgent(
+        model=LiteLlm(model_name=MODEL_GEMINI_2_0_FLASH, api_key=GOOGLE_API_KEY),
+        max_tokens=2048,
+        temperature=0.5,
+        top_p=0.95
+    ),
+    tools=[],
+    runner=Runner()
+)
