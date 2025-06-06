@@ -1,2 +1,4 @@
-orchestrator/.env
+*/.env
+*/*/.env
+*/*/*/.env
 */*/*.pyc
