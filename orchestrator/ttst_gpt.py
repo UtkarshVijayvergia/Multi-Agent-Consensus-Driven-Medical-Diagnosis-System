@@ -2,7 +2,7 @@ import asyncio
 from google.adk.agents import LlmAgent
 from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
-from google.genai.types import Content, Part
+from google.genai.types import Content, Part, GenerateContentConfig
 
 # Load environment variables from .env file
 import os
@@ -12,56 +12,82 @@ load_dotenv()
 # get env variables
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 
-# Define constants
-APP_NAME = "workflow_2_app"
+APP_NAME = "workflow_2_full_history"
 USER_ID = "user1"
-SESSION_ID = "workflow2_session"
+SESSION_ID = "full_history_consensus"
 MODEL = "gemini-2.0-flash"
-NUM_ROUNDS = 3
 
-# Define agents with output_key that will be overwritten later
+# --- Predefined Agents ---
 agentA = LlmAgent(
     name="AgentA",
     model=MODEL,
-    instruction="You are AgentA. Provide your opinion and comment on others if their views are provided.",
+    instruction="""You are AgentA. You are part of a multi-agent discussion. In each round, you will receive the user question and the complete history of past responses. Reflect on all rounds before responding.""",
+    generate_content_config=GenerateContentConfig(
+        max_output_tokens=100
+    )
 )
 
 agentB = LlmAgent(
     name="AgentB",
     model=MODEL,
-    instruction="You are AgentB. Provide your opinion and comment on others if their views are provided.",
+    instruction="""You are AgentB. You are part of a multi-agent discussion. In each round, you will receive the user question and the complete history of past responses. Reflect on all rounds before responding.""",
+    generate_content_config=GenerateContentConfig(
+        max_output_tokens=100
+    )
 )
 
 agentC = LlmAgent(
     name="AgentC",
     model=MODEL,
-    instruction="You are AgentC. Provide your opinion and comment on others if their views are provided.",
+    instruction="""You are AgentC. You are part of a multi-agent discussion. In each round, you will receive the user question and the complete history of past responses. Reflect on all rounds before responding.""",
+    generate_content_config=GenerateContentConfig(
+        max_output_tokens=100
+    )
 )
+
+agent_map = {
+    "AgentA": agentA,
+    "AgentB": agentB,
+    "AgentC": agentC
+}
 
 conductor = LlmAgent(
     name="ConductorAgent",
     model=MODEL,
-    instruction="You are a conductor coordinating a multi-agent discussion.",
+    instruction="""You are a conductor. Given the latest round of agent responses, determine if all 3 agents are now in agreement.
+If yes, say: 'Consensus reached.'
+If not, say: 'Discussion continues.'"""
 )
 
-# --- Run multi-round discussion ---
-async def run_workflow_2():
+# --- Main Workflow ---
+async def run_workflow_with_full_history():
     session_service = InMemorySessionService()
     await session_service.create_session(app_name=APP_NAME, user_id=USER_ID, session_id=SESSION_ID)
 
-    user_question = "What are the potential benefits and risks of AI in healthcare?"
+    user_question = "WHich fruit is better for health, apple or banana?"
+    round_num = 1
+    consensus_reached = False
+    AGENTS = ["AgentA", "AgentB", "AgentC"]
 
-    for round_num in range(1, NUM_ROUNDS + 1):
-        print(f"\n🔁 Round {round_num} Starting...\n")
+    while not consensus_reached:
+        print(f"\n🔁 Round {round_num} Started")
 
-        # Step 1: Each agent responds to user question + prior conductor summary
-        for agent in [agentA, agentB, agentC]:
-            agent.output_key = f"{agent.name}_thoughts_round{round_num}"
+        # Build full history prompt from previous rounds
+        history_text = f"User Question: {user_question}\n\n"
+        for past_round in range(1, round_num):
+            history_text += f"--- Round {past_round} ---\n"
+            for name in AGENTS:
+                key = f"{name}_thoughts_round{past_round}"
+                history_text += f"{name}: {{{key}}}\n"
+            history_text += "\n"
+
+        # Agents respond to full history
+        for name in AGENTS:
+            agent = agent_map[name]
+            agent.output_key = f"{name}_thoughts_round{round_num}"
+            prompt = f"{history_text}--- Round {round_num} ---\n{name}, please respond."
+
             runner = Runner(agent=agent, app_name=APP_NAME, session_service=session_service)
-
-            prompt = f"Round {round_num} — Original Question: {user_question}"
-            if round_num > 1:
-                prompt += f"\n\nConductor Summary from Last Round:\n{{conductor_summary_round{round_num - 1}}}"
 
             async for event in runner.run_async(
                 user_id=USER_ID,
@@ -69,38 +95,40 @@ async def run_workflow_2():
                 new_message=Content(parts=[Part(text=prompt)], role="user")
             ):
                 if event.is_final_response() and event.content:
-                    print(f"[{agent.name}] {event.content.parts[0].text.strip()}")
+                    print(f"[{name}]\n{event.content.parts[0].text.strip()}\n")
+                    print()
 
+        # Conductor checks for agreement
+        conductor_prompt = "Here are the latest responses:\n\n"
+        for name in AGENTS:
+            key = f"{name}_thoughts_round{round_num}"
+            conductor_prompt += f"{name}: {{{key}}}\n"
 
-        # Step 2: Conductor summarizes responses
-        conductor_output_key = f"conductor_summary_round{round_num}"
-        conductor.output_key = conductor_output_key
-
-        views = "\n".join([
-            f"{agent.name}: {{ {agent.name}_thoughts_round{round_num} }}"
-            for agent in [agentA, agentB, agentC]
-        ])
-        conductor.instruction = f"""You are a conductor.
-You received the following responses in round {round_num}:\n\n{views}
-
-Please summarize their perspectives and give them something to reflect on and respond to in the next round.
-"""
-
+        conductor.output_key = f"conductor_check_round{round_num}"
         runner = Runner(agent=conductor, app_name=APP_NAME, session_service=session_service)
+
+        verdict = ""
         async for event in runner.run_async(
             user_id=USER_ID,
             session_id=SESSION_ID,
-            new_message=Content(parts=[Part(text=prompt)], role="user")
+            new_message=Content(parts=[Part(text=conductor_prompt)], role="user")
         ):
             if event.is_final_response() and event.content:
-                print(f"[{agent.name}] {event.content.parts[0].text.strip()}")
+                verdict = event.content.parts[0].text.strip()
+                print(f"[ConductorAgent]\n{verdict}\n")
+                print()
 
-    # Show final state
+        if "consensus reached" in verdict.lower():
+            consensus_reached = True
+        else:
+            round_num += 1
+
+    # Final state print
     session = await session_service.get_session(app_name=APP_NAME, user_id=USER_ID, session_id=SESSION_ID)
     print("\n✅ Final session.state:\n")
     for key, val in session.state.items():
-        print(f"{key}:\n{val[:300]}{'...' if len(val) > 300 else ''}\n")
+        print(f"FINAL: {key}:\n{val[:300]}{'...' if len(val) > 300 else ''}\n")
 
 # --- Entry Point ---
 if __name__ == "__main__":
-    asyncio.run(run_workflow_2())
+    asyncio.run(run_workflow_with_full_history())
