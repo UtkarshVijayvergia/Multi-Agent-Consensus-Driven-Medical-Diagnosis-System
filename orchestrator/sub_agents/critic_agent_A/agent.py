@@ -13,10 +13,10 @@ GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 MODEL_GEMINI_2_0_FLASH = "gemini-2.0-flash-exp"
 
 
-Research_Agent_A = LlmAgent(
+Critic_Agent_A = LlmAgent(
     model=MODEL_GEMINI_2_0_FLASH,
-    name="Research_Agent_A",
-    instruction=prompt.RESEARCH_AGENT_A_PROMPT,
+    name="Critic_Agent_A",
+    instruction=prompt.CRITICAL_AGENT_A_PROMPT,
     generate_content_config=GenerateContentConfig(
         max_output_tokens=350
     ),

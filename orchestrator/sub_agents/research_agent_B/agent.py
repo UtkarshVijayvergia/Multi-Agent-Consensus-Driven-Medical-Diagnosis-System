@@ -1,46 +1,23 @@
-# Import necessary libraries
-import os
-import asyncio
-from google.adk.agents import Agent
 from google.adk.agents import LlmAgent
-from google.adk.models.lite_llm import LiteLlm # For multi-model support
-from google.adk.sessions import InMemorySessionService
-from google.adk.runners import Runner
-from google.genai import types # For creating message Content/Parts
 from google.adk.tools.agent_tool import AgentTool
-from google.adk.agents.callback_context import CallbackContext
-from google.adk.models import LlmResponse, LlmRequest
-from typing import Optional
 
-import warnings
-# Ignore all warnings
-warnings.filterwarnings("ignore")
+from . import prompt
 
-import logging
-logging.basicConfig(level=logging.ERROR)
-
-# Load environment variables from .env file
+import os
 from dotenv import load_dotenv
 load_dotenv()
-
-# get env variables
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+
 
 # Define Model Constants
 MODEL_GEMINI_2_0_FLASH = "gemini-2.0-flash-exp"
 
 
-
-root_agent = Agent(
-    name="research_agent_B",
-    description="Orchestrates sub-agents for various tasks.",
-    session_service=InMemorySessionService(),
-    llm=LlmAgent(
-        model=LiteLlm(model_name=MODEL_GEMINI_2_0_FLASH, api_key=GOOGLE_API_KEY),
-        max_tokens=2048,
-        temperature=0.5,
-        top_p=0.95
+Research_Agent_B = LlmAgent(
+    model=MODEL_GEMINI_2_0_FLASH,
+    name="Research_Agent_B",
+    instruction=prompt.RESEARCH_AGENT_B_PROMPT,
+    generate_content_config=GenerateContentConfig(
+        max_output_tokens=350
     ),
-    tools=[],
-    runner=Runner()
 )
