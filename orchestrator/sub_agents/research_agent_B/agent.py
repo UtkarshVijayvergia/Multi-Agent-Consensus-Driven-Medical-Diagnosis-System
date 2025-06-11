@@ -1,5 +1,6 @@
 from google.adk.agents import LlmAgent
 from google.adk.tools.agent_tool import AgentTool
+from google.genai.types import GenerateContentConfig
 
 from . import prompt
 
