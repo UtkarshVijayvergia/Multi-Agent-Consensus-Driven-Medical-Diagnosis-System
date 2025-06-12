@@ -8,7 +8,7 @@ from google.adk.tools.agent_tool import AgentTool
 
 from .sub_agents.research_agent_A import Research_Agent_A
 from .sub_agents.research_agent_B import Research_Agent_B
-from .sub_agents.critiv_agent_A import Critic_Agent_A
+from .sub_agents.critic_agent_A import Critic_Agent_A
 
 from . import prompt
 
