@@ -10,6 +10,9 @@ from google.adk.tools.agent_tool import AgentTool
 
 from . import prompt
 from .tools import exit_loop
+from .callbacks import increment_round_if_no_consensus
+from .conversation_memory_manager import ConversationMemoryManager
+memory_manager = ConversationMemoryManager() # Create memory manager instance
 
 import os
 from dotenv import load_dotenv
@@ -33,6 +36,8 @@ Research_Agent_A = LlmAgent(
     generate_content_config=GenerateContentConfig(
         max_output_tokens=350
     ),
+    output_key="Research_Agent_A_output",
+    after_model_callback=memory_manager.update_history,
 )
 
 
@@ -43,6 +48,8 @@ Research_Agent_B = LlmAgent(
     generate_content_config=GenerateContentConfig(
         max_output_tokens=350
     ),
+    output_key="Research_Agent_B_output",
+    after_model_callback=memory_manager.update_history,
 )
 
 
@@ -53,6 +60,8 @@ Critic_Agent_A = LlmAgent(
     generate_content_config=GenerateContentConfig(
         max_output_tokens=350
     ),
+    output_key="Critic_Agent_A_output",
+    after_model_callback=memory_manager.update_history,
 )
 
 
@@ -63,7 +72,8 @@ Evaluate_Consensus_Agent = LlmAgent(
     generate_content_config=GenerateContentConfig(
         max_output_tokens=100
     ),
-    tools=[exit_loop]
+    tools=[exit_loop],
+    after_model_callback=increment_round_if_no_consensus,
 )
 
 
