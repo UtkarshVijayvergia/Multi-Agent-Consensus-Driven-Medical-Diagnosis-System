@@ -7,12 +7,11 @@ from typing import AsyncGenerator, Optional
 from google.adk.events import Event, EventActions
 from google.genai.types import GenerateContentConfig
 from google.adk.tools.agent_tool import AgentTool
+from google.adk.agents.callback_context import CallbackContext
+from google.adk.models.llm_response import LlmResponse
+from datetime import datetime
 
 from . import prompt
-from .tools import exit_loop
-from .callbacks import increment_round_if_no_consensus
-from .conversation_memory_manager import ConversationMemoryManager
-memory_manager = ConversationMemoryManager() # Create memory manager instance
 
 import os
 from dotenv import load_dotenv
@@ -26,6 +25,67 @@ APP_NAME = "medical_consultation"
 USER_ID = "dev_user_01"
 SESSION_ID_BASE = "dev_session_01"
 DEV_PATIENT_QUERY = "I have a headache and feel dizzy. What could be the cause?"
+
+
+
+# Define Callback Functions
+# Define Callback Context
+def increment_round_if_no_consensus(callback_context: CallbackContext, llm_response: LlmResponse) -> Optional[LlmResponse]:
+    """
+    Increments the round number in the session state if the consensus is NOT reached.
+    Should be used as `after_model_callback` in Evaluate_Consensus_Agent.
+    """
+    # Defensive check: response must exist
+    if not llm_response.content or not llm_response.content.parts:
+        return None
+
+    # Check the agent's response text
+    response_text = llm_response.content.parts[0].text.lower()
+
+    if "consensus reached" not in response_text:
+        current_round = callback_context.state.get("round", 1)
+        callback_context.state["round"] = current_round + 1
+
+    # Return None to indicate that we are not modifying the LLM's output
+    return None
+
+
+
+class ConversationMemoryManager:
+    def __init__(self, history_key: str = "conversation_history"):
+        self.history_key = history_key
+
+    def update_history(self, callback_context: CallbackContext, llm_response: LlmResponse) -> Optional[LlmResponse]:
+        """Append the agent's response to shared conversation history in state."""
+        if not llm_response.content or not llm_response.content.parts:
+            return None  # nothing to append
+
+        agent_name = callback_context.agent_name or "UnknownAgent"
+        round_number = callback_context.state.get("round", 1)
+        timestamp = datetime.utcnow().isoformat()
+
+        text = llm_response.content.parts[0].text or "[No Text]"
+        new_entry = (
+            f"\n--- Round {round_number} | {agent_name} | {timestamp} ---\n{text}\n"
+        )
+
+        previous = callback_context.state.get(self.history_key, "")
+        callback_context.state[self.history_key] = previous + new_entry
+
+        return None  # return None to use the original LLM response
+
+memory_manager = ConversationMemoryManager() # Create memory manager instance
+
+
+
+# Define Tools
+def exit_loop(tool_context: ToolContext):
+    """Call this function ONLY when the critique indicates no further changes are needed, signaling the iterative process should end."""
+    print(f"  [Tool Call] exit_loop triggered by {tool_context.agent_name}")
+    tool_context.actions.escalate = True
+    # Return empty dict as tools should typically return JSON-serializable output
+    return {}
+
 
 
 # Define LLM Agents
