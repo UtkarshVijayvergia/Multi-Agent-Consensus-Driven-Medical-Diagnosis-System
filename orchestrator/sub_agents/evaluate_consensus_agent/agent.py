@@ -2,7 +2,9 @@ from google.adk.agents import LlmAgent
 from google.adk.tools.agent_tool import AgentTool
 from google.genai.types import GenerateContentConfig
 
-from .prompt import RESEARCH_AGENT_B_PROMPT_V3
+from .prompt import EVALUATE_CONSENSUS_AGENT_PROMPT_V1
+from ...tools.exit_loop import exit_loop
+from ...callbacks.increment_round_if_no_consensus import increment_round_if_no_consensus
 from ...callbacks.conversation_memory_manager import ConversationMemoryManager
 memory_manager = ConversationMemoryManager() # Create memory manager instance
 
@@ -13,13 +15,13 @@ GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 AGENT_MODEL = os.getenv("AGENT_MODEL")
 
 
-Research_Agent_B = LlmAgent(
+Evaluate_Consensus_Agent = LlmAgent(
     model=AGENT_MODEL,
-    name="Research_Agent_B",
-    instruction=RESEARCH_AGENT_B_PROMPT_V3,
+    name="Evaluate_Consensus_Agent",
+    instruction=EVALUATE_CONSENSUS_AGENT_PROMPT_V1,
     generate_content_config=GenerateContentConfig(
-        max_output_tokens=350
+        max_output_tokens=100
     ),
-    output_key="Research_Agent_B_output",
-    after_model_callback=memory_manager.update_history,
+    tools=[exit_loop],
+    after_model_callback=increment_round_if_no_consensus,
 )
