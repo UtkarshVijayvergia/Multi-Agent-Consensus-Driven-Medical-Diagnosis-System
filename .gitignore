@@ -1,13 +1,11 @@
 */.env
 */*/.env
-*/*/*/.env
-*/*/*/*/.env
-*/*/*/*/*/.env
 
 */*/*.pyc
 */*/*/*.pyc
 */*/*/*/*.pyc
 */*/*/*/*/*.pyc
-*/*/*/*/*/*/*.pyc
 
 commands.txt
+
+server/utils/serviceAccountKey.json

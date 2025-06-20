@@ -4,6 +4,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS  # Import the CORS library
 import asyncio
 
+from .utils.auth_utils import verify_firebase_token_and_whitelist
 from .call_agent import (
     call_agent_and_return_history,
     runner,
@@ -34,6 +35,7 @@ def hello_world():
 
 
 @app.route("/submit_query", methods=["POST"])
+@verify_firebase_token_and_whitelist
 async def submit_query():
     data = request.get_json()
     if not data or "query" not in data:
