@@ -13,12 +13,15 @@ def increment_round_if_no_consensus(callback_context: CallbackContext, llm_respo
     if not llm_response.content or not llm_response.content.parts:
         return None
 
-    # Check the agent's response text
-    response_text = llm_response.content.parts[0].text.lower()
+    # Get the first part of the response
+    response_part = llm_response.content.parts[0]
 
-    if "consensus reached" not in response_text:
-        current_round = callback_context.state.get("round", 1)
-        callback_context.state["round"] = current_round + 1
+    # Check if the response part contains text before accessing it
+    if response_part.text:
+        response_text = response_part.text.lower()
+        if "consensus reached" not in response_text:
+            current_round = callback_context.state.get("round", 1)
+            callback_context.state["round"] = current_round + 1
 
     # Return None to indicate that we are not modifying the LLM's output
     return None
