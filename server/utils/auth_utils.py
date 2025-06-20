@@ -5,7 +5,7 @@ from functools import wraps
 
 # Initialize Firebase Admin SDK (use your service account key)
 if not firebase_admin._apps:
-    cred = credentials.Certificate("utils/serviceAccountKey.json")
+    cred = credentials.Certificate("serviceAccountKey.json")
     firebase_admin.initialize_app(cred)
 
 # Decorator to verify Firebase token and whitelist user
