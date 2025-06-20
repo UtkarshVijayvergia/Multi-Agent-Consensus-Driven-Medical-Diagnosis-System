@@ -1,11 +1,5 @@
-# server/call_agent.py
-
 from google.adk.events import Event, EventActions
-from google.adk.sessions import InMemorySessionService
-from google.adk.runners import Runner
 from google.genai import types
-
-from .orchestrator_agent.agent import root_agent
 
 import os
 from dotenv import load_dotenv
@@ -20,15 +14,7 @@ APP_NAME = "medical_consultation"
 USER_ID = "dev_user_01"
 SESSION_ID = "dev_session_01"
 
-# Create the specific session where the conversation will happen
-session_service = InMemorySessionService()
 
-# Runner orchestrates the agent execution loop.
-runner = Runner(
-    agent=root_agent,
-    app_name=APP_NAME,
-    session_service=session_service
-)
 
 
 async def call_agent_and_return_history(query: str, runner, user_id, session_id):

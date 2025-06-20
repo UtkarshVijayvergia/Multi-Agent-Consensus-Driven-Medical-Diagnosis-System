@@ -1,21 +1,18 @@
-# server/server.py
-
+from google.adk.sessions import InMemorySessionService
+from google.adk.runners import Runner
 from flask import Flask, request, jsonify
 from flask_cors import CORS  # Import the CORS library
 import asyncio
 
-from .utils.auth_utils import verify_firebase_token_and_whitelist
-from .call_agent import (
-    call_agent_and_return_history,
-    runner,
-    session_service,
-    APP_NAME
-)
+from orchestrator_agent.agent import root_agent
+from utils.auth_utils import verify_firebase_token_and_whitelist
+from controller.call_agent_controller import call_agent_and_return_history
 
 
 # --- Constants ---
 USER_ID = "dev_user_01"
 SESSION_ID = "dev_session_01"
+APP_NAME = "medical_consultation"
 
 
 # --- Flask App Initialization ---
@@ -42,6 +39,15 @@ async def submit_query():
         return jsonify({"error": "Missing 'query' in request"}), 400
 
     user_query = data["query"]
+
+    # Create the specific session where the conversation will happen
+    session_service = InMemorySessionService()
+    # Runner orchestrates the agent execution loop.
+    runner = Runner(
+        agent=root_agent,
+        app_name=APP_NAME,
+        session_service=session_service
+    )
 
     try:
         await session_service.create_session(
