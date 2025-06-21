@@ -1,12 +1,13 @@
 import firebase_admin
-from firebase_admin import auth, credentials
+from firebase_admin import auth
+# from firebase_admin import auth, credentials
 from flask import request, jsonify
 from functools import wraps
 
 # Initialize Firebase Admin SDK (use your service account key)
 if not firebase_admin._apps:
-    cred = credentials.Certificate("serviceAccountKey.json")
-    firebase_admin.initialize_app(cred)
+    # cred = credentials.Certificate("serviceAccountKey.json")
+    firebase_admin.initialize_app()
 
 # Decorator to verify Firebase token and whitelist user
 def verify_firebase_token_and_whitelist(f):

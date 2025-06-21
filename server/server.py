@@ -4,6 +4,13 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS  # Import the CORS library
 import asyncio
 
+import os
+import google.generativeai as genai
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+genai.configure(api_key=GOOGLE_API_KEY)
+GOOGLE_GENAI_USE_VERTEXAI = os.getenv("GOOGLE_GENAI_USE_VERTEXAI")
+
+
 from orchestrator_agent.agent import root_agent
 from utils.auth_utils import verify_firebase_token_and_whitelist
 from controller.call_agent_controller import call_agent_and_return_history

@@ -16,10 +16,6 @@ COPY requirements.txt .
 RUN pip install --upgrade pip
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy environment and credential files
-COPY .env .
-COPY serviceAccountKey.json .
-
 # Copy the rest of the server code
 COPY . .
 
@@ -28,4 +24,3 @@ EXPOSE 5000
 
 # Start the Flask app
 CMD ["gunicorn", "-b", "0.0.0.0:5000", "server:app", "--worker-class", "gthread", "--threads", "4"]
-
